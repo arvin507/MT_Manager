@@ -185,6 +185,39 @@ fun AppsScreen(vm: BrowserViewModel) {
             }
         )
     }
+
+    vm.extracted?.let { result ->
+        ExtractedDialog(
+            result = result,
+            onDismiss = { vm.dismissExtracted() },
+            onLocate = { vm.locateExtracted() }
+        )
+    }
+}
+
+@Composable
+private fun ExtractedDialog(
+    result: BrowserViewModel.ExtractResult,
+    onDismiss: () -> Unit,
+    onLocate: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("提取完成") },
+        text = {
+            Column {
+                Text("已保存到 Download：")
+                Text(
+                    text = result.summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onLocate) { Text("打开位置") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("知道了") } }
+    )
 }
 
 @Composable

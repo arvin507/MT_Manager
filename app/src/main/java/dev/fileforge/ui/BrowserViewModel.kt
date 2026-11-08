@@ -85,6 +85,11 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app) {
     var showApps by mutableStateOf(false)
         private set
 
+    /** 最近一次提取的结果，非空时 AppsScreen 弹「提取完成」对话框。 */
+    data class ExtractResult(val path: String, val isDir: Boolean, val summary: String)
+    var extracted by mutableStateOf<ExtractResult?>(null)
+        private set
+
     private var searchJob: kotlinx.coroutines.Job? = null
     private var searchCancel = java.util.concurrent.atomic.AtomicBoolean(false)
 
@@ -487,7 +492,7 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app) {
 
                     if (target.splitPaths.isEmpty()) {
                         val out = FileOps.copyNamed(File(target.apkPath), download, "$stem.apk")
-                        "已提取 → ${out.name}"
+                        ExtractResult(out.absolutePath, isDir = false, out.name)
                     } else {
                         val dir = FileOps.uniqueTarget(download, stem)
                         dir.mkdirs()
@@ -496,12 +501,37 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app) {
                             val name = File(split).name.ifBlank { "split_$i.apk" }
                             FileOps.copyNamed(File(split), dir, name)
                         }
-                        "已提取 ${target.splitPaths.size + 1} 个 APK → $stem/"
+                        ExtractResult(
+                            dir.absolutePath, isDir = true,
+                            summary = "$stem/（${target.splitPaths.size + 1} 个 APK）"
+                        )
                     }
                 }
             }
             busy = false
-            message = result.fold({ it }, { "提取失败：${it.message ?: "未知错误"}" })
+            result.fold(
+                onSuccess = { extracted = it },
+                onFailure = { message = "提取失败：${it.message ?: "未知错误"}" }
+            )
+        }
+    }
+
+    /** 关闭提取完成对话框。 */
+    fun dismissExtracted() {
+        extracted = null
+    }
+
+    /** 跳转到提取产物位置：目录直接进入，文件进入所在目录并选中高亮。 */
+    fun locateExtracted() {
+        val dest = extracted ?: return
+        extracted = null
+        closeApps()
+        if (dest.isDir) {
+            goTo(active, dest.path)
+        } else {
+            val file = File(dest.path)
+            goTo(active, file.parent ?: return)
+            update(active) { it.copy(selection = setOf(file.absolutePath)) }
         }
     }
 
