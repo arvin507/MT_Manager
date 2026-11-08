@@ -1,0 +1,15 @@
+# Gradle
+.gradle/
+build/
+app/build/
+
+# IDE
+.idea/
+*.iml
+local.properties
+
+# NDK build artifacts
+.cxx/
+
+# OS
+.DS_Store
